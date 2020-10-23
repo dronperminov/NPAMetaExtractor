@@ -13,6 +13,8 @@ def main():
 
     solution = Solution()
     predicted = solution.predict(texts)
+
+    solution.test(data)
     print(quality(predicted, labels))
 
 
