@@ -14,18 +14,26 @@ class TypeExtractor:
         self.main_templates[DECREE] = {"УКАЗ"}
 
         self.lower_templates = dict()
-        self.lower_templates[RESOLUTION] = re.compile(r"настоящ.*? постановлени.*?|изменени.*? в постановлени.*| постановляет")
-        self.lower_templates[ORDER] = re.compile(r"приказыва.*")
-        self.lower_templates[LAW] = re.compile(r"настоящ.*? закон.*?")
-        self.lower_templates[DECREE] = re.compile(r"настоящ.*? указ.*?|изменени.*? в указ.*|ный указо.+")
+        self.lower_templates[FEDERAL_LAW] = re.compile(r"федеральный закон[ \n]*?о")
+        self.lower_templates[RESOLUTION] = re.compile(r"настоящ.*? постановлени.*?|постановление вступает в силу|изменени.*? в постановлени.*| постановляет")
+        self.lower_templates[ORDER] = re.compile(r"приказыва.*|приказ вступает в силу")
+        self.lower_templates[DISPOSAL] = re.compile(r"распоряжение[ \n]+?президента|настоящее распоряжение\b|\bраспоряжение[ \n]*?от")
+        self.lower_templates[LAW] = re.compile(r"настоящ.*? закон.*?|.+?закон вступает в силу")
+        self.lower_templates[DECREE] = re.compile(r"настоящ.*? указ.*?|изменени.*? в указ.*|ный указо.+|указ вступает|указ[ \b]*?президента")
 
     def extract(self, text: str) -> str:
-        first_lines = text.splitlines()[:15]
+        first_lines = text.splitlines()[:20]
 
         for doc_type in doc_types:
             for template in self.main_templates[doc_type]:
                 if template in first_lines:
                     return doc_type
+
+        lower = text.lower()
+
+        for doc_type in doc_types:
+            if self.lower_templates[doc_type].search(lower):
+                return doc_type
 
         for line in first_lines:
             for doc_type in doc_types:
@@ -33,13 +41,7 @@ class TypeExtractor:
                     if line.startswith(template) or line.endswith(template):
                         return doc_type
 
-        lower = text.lower()
-
-        for doc_type, regexp in self.lower_templates.items():
-            if regexp.search(lower):
-                return doc_type
-
-        return "default_type"
+        return RESOLUTION
 
     # тест точности по каждому из классов
     def test_accuracies(self, data: List[Tuple[str, dict]]):

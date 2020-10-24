@@ -5,4 +5,4 @@ DISPOSAL = "распоряжение"
 LAW = "закон"
 DECREE = "указ"
 
-doc_types = [FEDERAL_LAW, RESOLUTION, ORDER, DISPOSAL, LAW, DECREE]
+doc_types = [ORDER, DISPOSAL, RESOLUTION, FEDERAL_LAW, DECREE, LAW]
