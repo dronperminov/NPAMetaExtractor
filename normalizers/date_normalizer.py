@@ -3,15 +3,16 @@ import re
 
 class DateNormalizer:
     def __init__(self):
-        self.date_regexps = [
-            re.compile(r"\b[0-3]?[\dоО] *?[а-яА-Я][а-яА-Я]+[\n ](?:19|20)\d\d", re.M),
-            re.compile(r"\b[0-3]?[\dоО]\.[01]?[\dоО]\.(?:19|20)\d\d", re.M),
-            re.compile(r"\b[0-3]?[\dоО]/[01]?[\dоО]/(?:19|20)\d\d", re.M),
-            re.compile(r"\b[0-3]?[\dоО] [01]?[\dоО] (?:19|20)\d\d", re.M),
+        date_regexps = [
+            r"(?:\b[0-3оО]?[\dоО].? *?[а-яА-Я][а-яА-Я]+[\n ][12][09]\d\d)",
+            r"(?:\b[0-3оО]?[\dоО][./, ][01о]?[\dоО][./, ] ?[12][09]\d\d)"
         ]
 
+        self.date_regexps = re.compile("|".join(date_regexps), re.M)
+
         self.replace_regexps = [
-            (re.compile(r"[\n ]+", re.M), " "),
+            (re.compile(r"[\n,. ]+", re.M), " "),
+            (re.compile(r"\. +"), "."),
             (re.compile(r" *?январ[яь] ?", re.I), ".01."),
             (re.compile(r" *?феврал[яь] ?", re.I), ".02."),
             (re.compile(r" *?март[а]? ?", re.I), ".03."),
@@ -29,16 +30,20 @@ class DateNormalizer:
         ]
 
     def replace_date(self, date: str) -> str:
-        init_date = date
-
         for regexp, replacement in self.replace_regexps:
             date = regexp.sub(replacement, date)
 
         if not re.fullmatch(r"\d?\d\.\d?\d\.\d\d\d\d", date):
-            return init_date
+            return "[error_date]"
 
         parts = date.split('.')
         day, month, year = int(parts[0]), int(parts[1]), int(parts[2])
+
+        if day < 1 or day > 31 or month < 1 or month > 12 or year > 2025:
+            return "[error_date]"
+
+        if year > 2900:
+            year -= 900
 
         return '%02d.%02d.%04d' % (day, month, year)
 
@@ -46,14 +51,13 @@ class DateNormalizer:
         normalized = ''
         begin_index = 0
 
-        for regexp in self.date_regexps:
-            matches = regexp.finditer(text)
+        matches = self.date_regexps.finditer(text)
 
-            for match in matches:
-                start, end = match.span()
-                date = self.replace_date(text[start:end])
-                normalized += text[begin_index:start] + date
-                begin_index = end
+        for match in matches:
+            start, end = match.span()
+            date = self.replace_date(text[start:end])
+            normalized += text[begin_index:start] + date
+            begin_index = end
 
         normalized += text[begin_index:]
 
