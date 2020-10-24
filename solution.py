@@ -1,5 +1,6 @@
 from typing import List, Tuple
 from normalizers.tesseract_normalizer import TesseractNormalizer
+from normalizers.date_normalizer import DateNormalizer
 from extractors.type_extractor import TypeExtractor
 
 
@@ -7,6 +8,13 @@ class Solution:
     def __init__(self):
         self.tesseract_normalizer = TesseractNormalizer()
         self.type_extractor = TypeExtractor()
+        self.date_normalizer = DateNormalizer()
+
+    def normalize_text(self, text: str) -> str:
+        text = self.tesseract_normalizer.normalize(text)
+        text = self.date_normalizer.normalize(text)
+
+        return text
 
     def train(self, train: List[Tuple[str, dict]]) -> None:
         pass
@@ -15,7 +23,7 @@ class Solution:
         results = []
 
         for text in test:
-            text = self.tesseract_normalizer.normalize(text)
+            text = self.normalize_text(text)
             doc_type = self.type_extractor.extract(text)
 
             prediction = {"type": doc_type,
