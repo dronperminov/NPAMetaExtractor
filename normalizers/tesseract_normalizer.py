@@ -17,7 +17,16 @@ class TesseractNormalizer:
             (re.compile(r"2ипецк", re.I), "Липецк"),
             (re.compile(r"-п0|-п П", re.I), "-пп"),
             (re.compile(r"[еЕ]7"), "17"),
-            (re.compile(r"1\]"), "п")
+            (re.compile(r"1\]"), "п"),
+            (re.compile(r"отмепне", re.I), "отмене"),
+            (re.compile(r"`"), ""),
+            (re.compile(r"Гукуй-Мектеб"), "Тукуй-Мектеб"),
+            (re.compile(r"}"), ")"),
+            (re.compile(r"{"), "("),
+            (re.compile(r"Ёакон"), "Закон"),
+            (re.compile(r"скои "), "ской "),
+            (re.compile(r"ситуациий"), "ситуаций"),
+            (re.compile(r"КЕдиной"), "Единой")
         ]
 
     def normalize(self, text: str, strip_lines=True) -> str:
