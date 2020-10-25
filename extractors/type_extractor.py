@@ -22,7 +22,7 @@ class TypeExtractor:
         self.lower_templates[DECREE] = re.compile(r"настоящ.*? указ.*?|изменени.*? в указ.*|ный указо.+|указ вступает|указ[ \b]*?президента")
 
     def extract(self, text: str) -> str:
-        first_lines = text.splitlines()[:20]
+        first_lines = [line for line in text.splitlines() if line][:20]
 
         for doc_type in doc_types:
             for template in self.main_templates[doc_type]:
