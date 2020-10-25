@@ -5,6 +5,7 @@ from normalizers.date_normalizer import DateNormalizer
 from extractors.type_extractor import TypeExtractor
 from extractors.date_extractor import DateExtractor
 from extractors.number_extractor import NumberExtractor
+from extractors.name_extractor import NameExtractor
 
 
 class Solution:
@@ -15,12 +16,7 @@ class Solution:
         self.type_extractor = TypeExtractor()
         self.date_extractor = DateExtractor()
         self.number_extractor = NumberExtractor()
-
-    def normalize_text(self, text: str) -> str:
-        text = self.tesseract_normalizer.normalize(text)
-        text = self.date_normalizer.normalize(text)
-
-        return text
+        self.name_extractor = NameExtractor()
 
     def train(self, train: List[Tuple[str, dict]]) -> None:
         pass
@@ -29,24 +25,20 @@ class Solution:
         results = []
 
         for text in test:
-            text = self.normalize_text(text)
-            doc_type = self.type_extractor.extract(text)
-            date = self.date_extractor.extract(text, doc_type)
-            number = self.number_extractor.extract(text, doc_type, date)
+            stripped_text = self.tesseract_normalizer.normalize(text)
+            date_normalized_text = self.date_normalizer.normalize(stripped_text)
+            normalized_text = self.tesseract_normalizer.normalize(text, strip_lines=False)
+
+            doc_type = self.type_extractor.extract(date_normalized_text)
+            date = self.date_extractor.extract(date_normalized_text, doc_type)
+            number = self.number_extractor.extract(date_normalized_text, doc_type, date)
+            name = self.name_extractor.extract(normalized_text)
 
             prediction = {"type": doc_type,
                           "date": date,
                           "number": number,
                           "authority": "",
-                          "name": ""}
+                          "name": name}
             results.append(prediction)
 
         return results
-
-    def test(self, data: List[Tuple[str, dict]]) -> None:
-        for i, (text, label) in enumerate(data):
-            data[i] = (self.normalize_text(text), label)
-
-        self.type_extractor.test_accuracies(data)
-        self.date_extractor.test_accuracies(data)
-        self.number_extractor.test_accuracies(data)

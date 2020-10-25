@@ -20,12 +20,16 @@ class TesseractNormalizer:
             (re.compile(r"1\]"), "п")
         ]
 
-    def normalize(self, text: str) -> str:
+    def normalize(self, text: str, strip_lines=True) -> str:
         for regexp, replacement in self.rules:
             text = regexp.sub(replacement, text)
 
+        if not strip_lines:
+            return text
+
         lines = [line.strip(self.trash_chars) for line in text.splitlines()]
         text = "\n".join(lines)
+
         text = re.sub(r"[_}{#‘]", " ", text)
 
         matches = [match for match in re.finditer(r"[о0О][тТ]\d", text)]
