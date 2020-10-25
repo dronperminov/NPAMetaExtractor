@@ -1,8 +1,10 @@
 from typing import List, Tuple
 from normalizers.tesseract_normalizer import TesseractNormalizer
 from normalizers.date_normalizer import DateNormalizer
+
 from extractors.type_extractor import TypeExtractor
 from extractors.date_extractor import DateExtractor
+from extractors.number_extractor import NumberExtractor
 
 
 class Solution:
@@ -12,6 +14,7 @@ class Solution:
 
         self.type_extractor = TypeExtractor()
         self.date_extractor = DateExtractor()
+        self.number_extractor = NumberExtractor()
 
     def normalize_text(self, text: str) -> str:
         text = self.tesseract_normalizer.normalize(text)
@@ -29,10 +32,11 @@ class Solution:
             text = self.normalize_text(text)
             doc_type = self.type_extractor.extract(text)
             date = self.date_extractor.extract(text, doc_type)
+            number = self.number_extractor.extract(text, doc_type, date)
 
             prediction = {"type": doc_type,
                           "date": date,
-                          "number": "",
+                          "number": number,
                           "authority": "",
                           "name": ""}
             results.append(prediction)
@@ -45,3 +49,4 @@ class Solution:
 
         self.type_extractor.test_accuracies(data)
         self.date_extractor.test_accuracies(data)
+        self.number_extractor.test_accuracies(data)

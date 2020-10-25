@@ -6,7 +6,7 @@ from constants import *
 
 class DateExtractor:
     def __init__(self):
-        self.date_regexp = re.compile(r"\d\d\.\d\d\.\d\d\d\d")
+        self.date_regexp = re.compile(r"[0-3]\d\.[01]\d\.[12][09]\d\d")
         self.start_date_regexp = re.compile(r"^" + self.date_regexp.pattern, re.M)
         self.order_regexps = [
             re.compile(self.date_regexp.pattern + r"[\s\S\n]{0,50}?ПРИКАЗ", re.M),
