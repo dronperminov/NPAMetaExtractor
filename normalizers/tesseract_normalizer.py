@@ -5,7 +5,7 @@ class TesseractNormalizer:
     def __init__(self):
         self.trash_chars = " !#$%&'*+,-/:;<=>?@[\\]^_`{|}©®°і‘’‚…‹›"
         self.rules = [
-            (re.compile(r"\b[пПН]?ОС[Г]?ТА[НВ][О.]В[ЛП]ЕНИ[ЕК]{0,2}\b"), "ПОСТАНОВЛЕНИЕ"),
+            (re.compile(r"\b[пПН]?ОС[Г]?ТА[НВ][О.]В[ЛП]ЕНИ[ЕК]{0,3}\b"), "ПОСТАНОВЛЕНИЕ"),
             (re.compile(r"\b[ПН]{1,2} ?Р ?И ?К ?А ?З\b"), "ПРИКАЗ"),
             (re.compile(r"\bУ ?К ?А ?З\b"), "УКАЗ"),
 
@@ -24,9 +24,14 @@ class TesseractNormalizer:
             (re.compile(r"}"), ")"),
             (re.compile(r"{"), "("),
             (re.compile(r"Ёакон"), "Закон"),
-            (re.compile(r"скои "), "ской "),
             (re.compile(r"ситуациий"), "ситуаций"),
-            (re.compile(r"КЕдиной"), "Единой")
+            (re.compile(r"КЕдиной"), "Единой"),
+            (re.compile(r"скои"), "ской"),
+            (re.compile(r"СКОЙ"), "СКОЙ"),
+            (re.compile(r"НЕНЕ[ЦК]*О?ГО", re.I), "НЕНЕЦКОГО"),
+            (re.compile(r"ЛВТОНОМНОГО", re.I), "АВТОНОМНОГО"),
+            (re.compile(r"Ъ/\["), "М"),
+            (re.compile(r"ульяёбёскои"), "ульяновской")
         ]
 
     def normalize(self, text: str, strip_lines=True) -> str:

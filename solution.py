@@ -5,6 +5,7 @@ from normalizers.date_normalizer import DateNormalizer
 from extractors.type_extractor import TypeExtractor
 from extractors.date_extractor import DateExtractor
 from extractors.number_extractor import NumberExtractor
+from extractors.authority_extractor import AuthorityExtractor
 from extractors.name_extractor import NameExtractor
 
 
@@ -16,6 +17,7 @@ class Solution:
         self.type_extractor = TypeExtractor()
         self.date_extractor = DateExtractor()
         self.number_extractor = NumberExtractor()
+        self.authority_extractor = AuthorityExtractor()
         self.name_extractor = NameExtractor()
 
     def train(self, train: List[Tuple[str, dict]]) -> None:
@@ -32,12 +34,13 @@ class Solution:
             doc_type = self.type_extractor.extract(date_normalized_text)
             date = self.date_extractor.extract(date_normalized_text, doc_type)
             number = self.number_extractor.extract(date_normalized_text, doc_type, date)
+            authority = self.authority_extractor.extract(normalized_text, doc_type)
             name = self.name_extractor.extract(normalized_text)
 
             prediction = {"type": doc_type,
                           "date": date,
                           "number": number,
-                          "authority": "",
+                          "authority": authority,
                           "name": name}
             results.append(prediction)
 
