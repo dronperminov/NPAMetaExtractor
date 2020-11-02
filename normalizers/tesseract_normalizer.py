@@ -3,11 +3,14 @@ import re
 
 class TesseractNormalizer:
     def __init__(self):
-        self.trash_chars = " !#$%&'*+,-/:;<=>?@[\\]^_`{|}©®°і‘’‚…‹›"
+        self.trash_chars = " !#$%&'*+,-/;<=>?@[\\]^_`{|}©®°і‘’‚…‹›"
         self.rules = [
-            (re.compile(r"\b[пПН]?ОС[Г]?ТА[НВ][О.]В[ЛП]ЕНИ[ЕК]{0,3}\b"), "ПОСТАНОВЛЕНИЕ"),
-            (re.compile(r"\b[ПН]{1,2} ?Р ?И ?К ?А ?З\b"), "ПРИКАЗ"),
-            (re.compile(r"\bУ ?К ?А ?З\b"), "УКАЗ"),
+            (re.compile(r"[. ]*\b[пПНИ]?[Оо]?[СЗз][Г]?[Тт][АВ]Ц?[НВ]?[О.Я]?[БВ][АЛП][ЕР][НЦИ]И[ЕКВ]{0,3}\b|^А?Н?О?В?ЛЕНИЕ\b|ПОСТАНОВ(?:Л\b|:)"), "ПОСТАНОВЛЕНИЕ"),
+            (re.compile(r"\b[ПНИ]{1,2} ?Р ?[И&] ?К ?А ?З?|\bПР и ?[зЗ3]", re.IGNORECASE), "ПРИКАЗ"),
+            (re.compile(r"[У'`] ?К ?А ?[З:]"), "УКАЗ"),
+            (re.compile(r"^У\nГУБЕРНАТОРА", re.M), "УКАЗ\nГУБЕРНАТОРА"),
+            (re.compile(r"З?АКОН?\b"), "ЗАКОН"),
+            (re.compile(r"о? ?Р?АС[ПН]ОРЯЖЕНИЕ\b"), "РАСПОРЯЖЕНИЕ"),
 
             (re.compile(r"\bд?ека[бо]ря|\bдекабряо", re.I), "декабря"),
             (re.compile(r"ИиЮюНня", re.I), "июня"),
@@ -31,7 +34,7 @@ class TesseractNormalizer:
             (re.compile(r"НЕНЕ[ЦК]*О?ГО", re.I), "НЕНЕЦКОГО"),
             (re.compile(r"ЛВТОНОМНОГО", re.I), "АВТОНОМНОГО"),
             (re.compile(r"Ъ/\["), "М"),
-            (re.compile(r"ульяёбёскои"), "ульяновской")
+            (re.compile(r"ульяёбёскои"), "ульяновской"),
         ]
 
     def normalize(self, text: str, strip_lines=True) -> str:
@@ -44,7 +47,7 @@ class TesseractNormalizer:
         lines = [line.strip(self.trash_chars) for line in text.splitlines()]
         text = "\n".join(lines)
 
-        text = re.sub(r"[_}{#‘]", " ", text)
+        text = re.sub(r"[_}{#”‘]", " ", text)
 
         matches = [match for match in re.finditer(r"[о0О][тТ]\d", text)]
         for match in matches[::-1]:
