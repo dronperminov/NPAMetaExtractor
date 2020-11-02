@@ -1,4 +1,5 @@
 import re
+from datetime import datetime
 
 
 class DateNormalizer:
@@ -44,6 +45,11 @@ class DateNormalizer:
 
         if year > 2900:
             year -= 900
+
+        try:
+            datetime.strptime(date, '%d.%m.%Y')
+        except ValueError:
+            return "[error_date]"
 
         return '%02d.%02d.%04d' % (day, month, year)
 
