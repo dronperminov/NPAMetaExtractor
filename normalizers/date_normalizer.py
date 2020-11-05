@@ -5,8 +5,8 @@ from datetime import datetime
 class DateNormalizer:
     def __init__(self):
         date_regexps = [
-            r"(?:\b[0-3оО]?[\dоО].? *?[а-яА-Я][а-яА-Я]+[\n ][12][09]\d\d)",
-            r"(?:\b[0-3оО]?[\dоО][./, ][01о]?[\dоО][./, ] ?[12][09]\d\d)"
+            r"(?:\b[0-3ЗоО]?[\dоОТ].? *?[а-яА-Я][а-яА-Я]+[\n ][12][09]\d\d)",
+            r"(?:\b[0-3ЗоО]?[\dоОТ][./, ] ?[01о]?[\dоО][./, ] ?[12][09]\d\d)"
         ]
 
         self.date_regexps = re.compile("|".join(date_regexps), re.M)
@@ -14,20 +14,22 @@ class DateNormalizer:
         self.replace_regexps = [
             (re.compile(r"[\n,. ]+", re.M), " "),
             (re.compile(r"\. +"), "."),
-            (re.compile(r" *?январ[яь] ?", re.I), ".01."),
+            (re.compile(r" *?я[вн][вд]ар[яь] ?", re.I), ".01."),
             (re.compile(r" *?феврал[яь] ?", re.I), ".02."),
             (re.compile(r" *?март[а]? ?", re.I), ".03."),
             (re.compile(r" *?апрел[яь] ?", re.I), ".04."),
             (re.compile(r" *?ма[яй] ?", re.I), ".05."),
-            (re.compile(r" *?июн[яь] ?", re.I), ".06."),
-            (re.compile(r" *?июл[яь] ?", re.I), ".07."),
-            (re.compile(r" *?август[а]? ?", re.I), ".08."),
-            (re.compile(r" *?сентябр[яь] ?", re.I), ".09."),
-            (re.compile(r" *?октябр[яь] ?", re.I), ".10."),
+            (re.compile(r" *?[имн][юор]н[яь]? ?|илома ?", re.I), ".06."),
+            (re.compile(r" *?[имн][юор]л[яь] ?", re.I), ".07."),
+            (re.compile(r" *?[ав][вн][гт]уст[а]? ?", re.I), ".08."),
+            (re.compile(r" *?се[нм]т?ябр[яь] ?", re.I), ".09."),
+            (re.compile(r" *?о[кн][тг]ябр[яь] ?", re.I), ".10."),
             (re.compile(r" *?ноябр[яь] ?", re.I), ".11."),
             (re.compile(r" *?декабр[яь] ?", re.I), ".12."),
             (re.compile(r"[оО]", re.I), "0"),
-            (re.compile(r"[ /]+"), ".")
+            (re.compile(r"[тТ]", re.I), "1"),
+            (re.compile(r"[зЗ]", re.I), "3"),
+            (re.compile(r"[. /]+"), ".")
         ]
 
     def replace_date(self, date: str) -> str:
@@ -40,11 +42,11 @@ class DateNormalizer:
         parts = date.split('.')
         day, month, year = int(parts[0]), int(parts[1]), int(parts[2])
 
-        if day < 1 or day > 31 or month < 1 or month > 12 or year > 2025:
-            return "[error_date]"
-
         if year > 2900:
             year -= 900
+
+        if day < 1 or day > 31 or month < 1 or month > 12 or year > 2025:
+            return "[error_date]"
 
         try:
             datetime.strptime(date, '%d.%m.%Y')
@@ -57,11 +59,12 @@ class DateNormalizer:
         normalized = ''
         begin_index = 0
 
+        text = re.sub(r"[«»_=|()?]", "", text)
         matches = self.date_regexps.finditer(text)
 
         for match in matches:
             start, end = match.span()
-            date = self.replace_date(text[start:end])
+            date = self.replace_date(text[start:end].lower())
             normalized += text[begin_index:start] + date
             begin_index = end
 

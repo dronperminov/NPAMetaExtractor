@@ -7,16 +7,24 @@ from constants import *
 class DateExtractor:
     def __init__(self):
         self.date_regexp = re.compile(r"[0-3]\d\.[01]\d\.[12][09]\d\d")
-        self.start_date_regexp = re.compile(r"^" + self.date_regexp.pattern, re.M)
+        self.start_date_regexp = re.compile(r"^[ —]*" + self.date_regexp.pattern, re.M)
         self.order_regexps = [
-            re.compile(self.date_regexp.pattern + r"[\s\S\n]{0,50}?ПРИКАЗ", re.M),
-            re.compile(r"ПРИКАЗ[\s\S\n]{0,50}?" + self.date_regexp.pattern, re.M),
-            re.compile(r"^От +?" + self.date_regexp.pattern, re.M),
+            re.compile(r"№.*\n^От *?" + self.date_regexp.pattern, re.M),
+            re.compile(r"^ПРИКАЗ[\s\S\n]{0,50}?" + self.date_regexp.pattern, re.M),
+            re.compile(self.date_regexp.pattern + r"[\s\S\n]{0,50}?^ПРИКАЗ\b", re.M),
+            re.compile(r"^\s*" + self.date_regexp.pattern + r"(?: *г. *)?(?: № \d+-\w+)?$", re.M),
+            re.compile(r"^От *?" + self.date_regexp.pattern, re.M),
         ]
 
         self.law_regexp = re.compile(r"^" + self.date_regexp.pattern + r"(?!\s*\d\d:\d\d)")
-        self.decree_regexp = re.compile(r"^от +?" + self.date_regexp.pattern, re.M)
-        self.disposal_regexp = re.compile(r"РАСПОРЯЖЕНИЕ[\s\S\n]{0,100}?" + self.date_regexp.pattern, re.M)
+        self.law_regexps = [
+            re.compile(r"^№ \d+ ?[-—]?ЗК?О? от " + self.date_regexp.pattern, re.M),
+            re.compile(r"^" + self.date_regexp.pattern + r" (?:г\.|года)\n+?№ \d+", re.M),
+        ]
+        self.decree_regexp = re.compile(r"^(?:[оО]т|г) *?" + self.date_regexp.pattern, re.M)
+        self.disposal_regexps = [
+            re.compile(r"РАСПОРЯЖЕНИЕ[\s\S\n]{0,100}?" + self.date_regexp.pattern, re.M),
+        ]
         self.resolution_regexp = re.compile(r"ПОСТАНОВЛЕНИЕ[\s\S\n]{0,100}?" + self.date_regexp.pattern, re.M)
 
     def __extract_date(self, line: str) -> str:
@@ -53,7 +61,7 @@ class DateExtractor:
             if dates:
                 return self.__extract_date(dates[0])
 
-        lines = text.splitlines()
+        lines = [line for line in text.splitlines() if len(line) > 2]
 
         for line in lines[:5]:
             if self.date_regexp.search(line):
@@ -62,24 +70,54 @@ class DateExtractor:
         return ""
 
     def extract_law(self, text: str) -> str:
-        if re.search(r"ПОСТАНОВЛЯЕТ", text):
-            text = text[:text.index("ПОСТАНОВЛЯЕТ")]  # sorry me...
+        for regexp in self.law_regexps:
+            dates = regexp.findall(text)
 
-        lines = text.splitlines()
+            if dates:
+                return self.__extract_date(dates[0])
 
-        for line in lines[-1:-20:-1]:
+        if re.search("^ПОСТАНОВЛЕНИЕ", text, re.M):
+            return self.extract_resolution(text)
+
+        if "ЗАКОНЫ" in text:
+            text = text[:text.index("ЗАКОНЫ")]
+
+        lines = [line for line in text.splitlines() if len(line) > 2]
+
+        if len(lines) > 1 and self.date_regexp.search(lines[-2]):
+            return self.__extract_date(lines[-2])
+
+        for line in lines[-1:-10:-1]:
             if self.law_regexp.search(line):
                 return self.__extract_date(line)
 
         return ""
 
     def extract_decree(self, text: str) -> str:
-        if re.search(r"ПОСТАНОВЛЯЮ", text):
-            text = text[:text.index("ПОСТАНОВЛЯЮ")]  # sorry me...
+        names = re.findall(r"^(?:О[бБ]?|\d+\.) (?:.*\n)+?\n", text, re.M)
 
-        lines = text.splitlines()
+        for name in names:
+            text = text.replace(name, "")
 
-        for line in lines[:5]:
+        if "ПРИЛОЖЕНИЕ №" in text:
+            text = text[:text.index("ПРИЛОЖЕНИЕ №")]
+
+        if "РИСУНОК" in text:
+            text = text[:text.index("РИСУНОК")]
+
+        lines = [line for line in text.splitlines() if len(line) > 2]
+
+        for line in lines[:3]:
+            if self.start_date_regexp.search(line):
+                return self.__extract_date(line)
+
+            if self.decree_regexp.search(line):
+                return self.__extract_date(line)
+
+        for line in lines[-1:-3:-1]:
+            if self.decree_regexp.search(line):
+                return self.__extract_date(line)
+
             if self.start_date_regexp.search(line):
                 return self.__extract_date(line)
 
@@ -95,16 +133,31 @@ class DateExtractor:
         return ""
 
     def extract_disposal(self, text: str) -> str:
-        lines = text.splitlines()
+        dates = re.findall(r"^" + self.date_regexp.pattern + r" ?(?:[гт]|[гт]о[дл]а)\.?\n*?(?:№ ?\d+|\d+-р)", text, re.M)
+
+        if dates:
+            return self.__extract_date(dates[0])
+
+        dates = re.findall(r"^№ ?\d+[/\-\w]*(?: \d+/\d+\-\d+)?\n*?[оО]т ?" + self.date_regexp.pattern, text, re.M)
+
+        if dates:
+            return self.__extract_date(dates[0])
+
+        lines = [line for line in text.splitlines() if len(line) > 2]
+
+        for line in lines[:4]:
+            if self.start_date_regexp.search(line):
+                return self.__extract_date(line)
 
         for line in lines[-1:-3:-1]:
             if self.start_date_regexp.search(line):
                 return self.__extract_date(line)
 
-        dates = self.disposal_regexp.findall(text)
+        for regexp in self.disposal_regexps:
+            dates = regexp.findall(text)
 
-        if dates:
-            return self.__extract_date(dates[0])
+            if dates:
+                return self.__extract_date(dates[0])
 
         for line in lines[::-1]:
             if self.start_date_regexp.search(line):
@@ -160,23 +213,22 @@ class DateExtractor:
 
         return extracted_date if extracted_date else self.__extract_max_date(text)
 
-    def test_accuracies(self, data: List[Tuple[str, dict]]):
+    # тест точности по каждому из классов
+    def test_accuracies(self, data: List[Tuple[str, dict]], predictions: List[dict]):
         correct = {doc_type: 0 for doc_type in doc_types}
         total = {doc_type: 0 for doc_type in doc_types}
+
         correct_all = 0
 
-        for example in data:
-            text, label = example
-            date = self.extract(text, label["type"])
-
-            if label["date"] == date:
+        for (text, label), prediction in zip(data, predictions):
+            if label["date"] == prediction["date"]:
                 correct[label["type"]] += 1
                 correct_all += 1
 
             total[label["type"]] += 1
 
-        print("\nDate extractor accuracy test:")
+        print("Date extractor accuracy test:")
         for doc_type in doc_types:
-            print(f'{doc_type}: {correct[doc_type]} / {total[doc_type]} ({correct[doc_type] / total[doc_type]}, error: {total[doc_type] - correct[doc_type]})')
+            print(f'{doc_type}: {correct[doc_type]} / {total[doc_type]} ({correct[doc_type] / max(1, total[doc_type])}), incorrect: {total[doc_type] - correct[doc_type]}')
 
         print(f'Total: {correct_all} / {len(data)} ({correct_all / len(data)})')
