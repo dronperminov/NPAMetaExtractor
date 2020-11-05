@@ -5,7 +5,7 @@ from datetime import datetime
 class DateNormalizer:
     def __init__(self):
         date_regexps = [
-            r"(?:\b[0-3ЗоО]?[\dоОТ].? *?[а-яА-Я][а-яА-Я]+[\n ][12][09]\d\d)",
+            r"(?:\b[0-3ЗоО]?[\dоОТ].? *?[а-яА-Я][а-яА-Я]+[\n ]*?[12][09]\d\d)",
             r"(?:\b[0-3ЗоО]?[\dоОТ][./, ] ?[01о]?[\dоО][./, ] ?[12][09]\d\d)"
         ]
 
@@ -59,7 +59,7 @@ class DateNormalizer:
         normalized = ''
         begin_index = 0
 
-        text = re.sub(r"[«»_=|()?]", "", text)
+        text = re.sub(r"[«»_=|()?<]", "", text)
         matches = self.date_regexps.finditer(text)
 
         for match in matches:
