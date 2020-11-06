@@ -36,6 +36,10 @@ class TesseractNormalizer:
             (re.compile(r"ЛВТОНОМНОГО", re.I), "АВТОНОМНОГО"),
             (re.compile(r"Ъ/\["), "М"),
             (re.compile(r"ульяёбёскои"), "ульяновской"),
+            (re.compile(r"декабряе"), "декабре"),
+            (re.compile(r"\bгоца\b"), "года"),
+            (re.compile(r"\bгоцов\b"), "годов"),
+            (re.compile(r"детеи"), "детей")
         ]
 
     def normalize(self, text: str, strip_lines=True) -> str:
