@@ -35,11 +35,20 @@ class TesseractNormalizer:
             (re.compile(r"НЕНЕ[ЦК]*О?ГО", re.I), "НЕНЕЦКОГО"),
             (re.compile(r"ЛВТОНОМНОГО", re.I), "АВТОНОМНОГО"),
             (re.compile(r"Ъ/\["), "М"),
+            (re.compile(r"\[ГТ\["), "П"),
             (re.compile(r"ульяёбёскои"), "ульяновской"),
             (re.compile(r"декабряе"), "декабре"),
             (re.compile(r"\bгоца\b"), "года"),
             (re.compile(r"\bгоцов\b"), "годов"),
-            (re.compile(r"детеи"), "детей")
+            (re.compile(r"детеи"), "детей"),
+            (re.compile(r"администрацния", re.I), "администрация"),
+            (re.compile(r"коллыгия", re.I), "коллегия"),
+            (re.compile(r"т?гверской", re.I), "Тверской"),
+            (re.compile(r"алтаис", re.I), "алтайс"),
+            (re.compile(r"ГУБЕ\.?РНА ?ТО ?Р"), "ГУБЕРНАТОР"),
+            (re.compile(r"ямалоненецкого", re.I), "Ямало-Ненецкого"),
+            (re.compile(r"с?[ вё]?[вер][;ьръі][’›]?дл[оь]вской", re.I), "Свердловской"),
+            (re.compile(r"хантымансийского", re.I), "Ханты-Мансийского")
         ]
 
     def normalize(self, text: str, strip_lines=True) -> str:
