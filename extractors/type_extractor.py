@@ -55,23 +55,3 @@ class TypeExtractor:
             return RESOLUTION
 
         return ORDER
-
-    # тест точности по каждому из классов
-    def test_accuracies(self, data: List[Tuple[str, dict]], predictions: List[dict]):
-        correct = {doc_type: 0 for doc_type in doc_types}
-        total = {doc_type: 0 for doc_type in doc_types}
-
-        correct_all = 0
-
-        for (text, label), prediction in zip(data, predictions):
-            if label["type"] == prediction["type"]:
-                correct[label["type"]] += 1
-                correct_all += 1
-
-            total[label["type"]] += 1
-
-        print("Type extractor accuracy test:")
-        for doc_type in doc_types:
-            print(f'{doc_type}: {correct[doc_type]} / {total[doc_type]} ({correct[doc_type] / total[doc_type]})')
-
-        print(f'Total: {correct_all} / {len(data)} ({correct_all / len(data)})')

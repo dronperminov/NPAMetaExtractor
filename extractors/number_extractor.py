@@ -68,23 +68,3 @@ class NumberExtractor:
         number = self.extract_by_regexp(regexp, text, date, -1 if doc_type in [LAW, FEDERAL_LAW, DISPOSAL] else 0)
 
         return self.clear_number(number, doc_type)
-
-    # тест точности по каждому из классов
-    def test_accuracies(self, data: List[Tuple[str, dict]], predictions: List[dict]):
-        correct = {doc_type: 0 for doc_type in doc_types}
-        total = {doc_type: 0 for doc_type in doc_types}
-        correct_all = 0
-
-        for (text, label), prediction in zip(data, predictions):
-            if label["number"].lower() == prediction["number"].lower():
-                correct[label["type"]] += 1
-                correct_all += 1
-
-            total[label["type"]] += 1
-
-        print("Number extractor accuracy test:")
-        for doc_type in doc_types:
-            print(
-                f'{doc_type}: {correct[doc_type]} / {total[doc_type]} ({correct[doc_type] / max(1, total[doc_type])}), incorrect: {total[doc_type] - correct[doc_type]}')
-
-        print(f'Total: {correct_all} / {len(data)} ({correct_all / len(data)})')
