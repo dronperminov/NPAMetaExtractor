@@ -1,14 +1,13 @@
 import re
 from constants import *
+from normalizers.name_normalizer import NameNormalizer
 from typing import List, Tuple
 
 
 class NameExtractor:
     def __init__(self, for_metric=True):
         self.strip_chars = " \n':|-©‚`" + ("\"" if for_metric else "")
-        self.stop_words = ["\" в редакции", "Принят", "Статья", "Назначить", "Освободить", "Присвоить", "Включить",
-                           "За активное", " в связи с жалоб", " в связи с запрос", " и пункта"]
-
+        self.name_normalizer = NameNormalizer(self.strip_chars)
         self.paragraph_regexp = re.compile(r"(?:.*\n)+?\n", re.M)
 
         self.name_regexps = [
@@ -17,36 +16,6 @@ class NameExtractor:
             re.compile(r"^Вопросы .+$", re.M),
             re.compile(r"\bО[бБ]? .+$", re.M),
         ]
-
-        self.replace_regexps = [
-            (re.compile("'"), "\""),
-            (re.compile("[|=*]"), ""),
-            (re.compile("_| [,‚]"), " "),
-            (re.compile("©"), "с"),
-            (re.compile("ОЁ"), "Об"),
-            (re.compile("Вв"), "в")
-        ]
-
-    def clear_name(self, name: str) -> str:
-        for regexp, replacement in self.replace_regexps:
-            name = regexp.sub(replacement, name)
-
-        name = name.strip(self.strip_chars)
-
-        if name.startswith("О законе") or name.startswith("О Законе") and " \"О" in name:
-            name = name[name.index(" \"О")+2:]
-
-        for word in self.stop_words:
-            if word in name:
-                name = name[:name.index(word)]
-
-        while "  " in name:
-            name = name.replace("  ", " ")
-
-        if re.fullmatch(r".* [.уоО]|.*\".", name):
-            name = name[:-2]
-
-        return name.strip(' \"')
 
     def clear_paragraph(self, paragraph: str) -> str:
         return paragraph.strip(self.strip_chars).replace("\n", " ")
@@ -65,7 +34,7 @@ class NameExtractor:
             names = regexp.findall(text)
 
             if names:
-                return self.clear_name(names[0])
+                return self.name_normalizer.normalize(names[0])
 
         return "unknown name"
 
