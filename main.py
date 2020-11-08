@@ -1,7 +1,7 @@
 from solution import Solution
-from evaluators.eval_module import quality
-from evaluators.accuracy_evaluator import AccuracyEvaluator
-from data_reader import DataReader
+from utils.eval_module import quality
+from utils.accuracy_evaluator import AccuracyEvaluator
+from utils.data_reader import DataReader
 
 
 def main():
