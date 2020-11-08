@@ -5,14 +5,14 @@ from normalizers.authority_normalizer import AuthorityNormalizer
 
 class AuthorityExtractor:
     def __init__(self, for_metric=True):
-        self.strip_chars = " \n':|-.,‚‘’°©^(" + ("\"" if for_metric else "")
+        self.strip_chars = " \n':|-.,‚‘’°©^" + ("\"" if for_metric else "")
         self.authority_normalizer = AuthorityNormalizer(self.strip_chars)
 
         self.authors = ["[пП]равительство", "Совет [Мм]инистров", "Президент", "Администрация", "Кабинет [Мм]инистров",
                         "Народное [сС]обрание", "Законодательное [Сс]обрание"]
-        self.upper_authors = ["ПРАВИТЕЛЬСТВ[ОА]", "ГУБЕРНАТОРА?", "ДУМА\b", "Дума", "КАБИНЕТ МИНИСТРОВ", "ПРЕЗИДЕНТ",
+        self.upper_authors = ["ПРАВИТЕЛЬСТВ[ОА]", "ГУБЕРНАТОРА?", "ДУМА$", "Дума", "КАБИНЕТ МИНИСТРОВ", "ПРЕЗИДЕНТ",
                               r"ФЕДЕРАЛЬН(?:АЯ|ОЕ)(?: \w+,?)*", r"МИНИСТЕРСТВО(?: \w+,?)*$", "ГЛАВ[АЫ]", r"СОВЕТА?(?: \w+,?)*",
-                              "ЗАКОНОДАТЕЛЬНОЕ СОБРАНИЕ", r"УПРАВЛЕНИЕ(?: \w+,?)*", r"КОМИТЕТ(?: \w+,?)*",
+                              "ЗАКОНОДАТЕЛЬНОЕ СОБРАНИЕ", r"АРХИВНОЕ(?: \w+,?)*", r"УПРАВЛЕНИЕ(?: \w+,?)*", r"КОМИТЕТ(?: \w+,?)*", "ДЕПАРТАМЕНТ",
                               r"СЛУЖБА(?: \w+,?)*", r"ИНСПЕКЦИЯ(?: \w+,?)*", r"АППАРАТ(?: \w+,?)*", r"АГЕНТСТВО(?: \w+,?)*"]
 
         self.joined_authors = "|".join(self.authors)
@@ -92,17 +92,24 @@ class AuthorityExtractor:
 
         return self.authority_normalizer.normalize(paragraphs[0])
 
-    def extract_law(self, paragraphs: list) -> str:
-        for paragraph in paragraphs:
-            if paragraph.startswith("Принят ") or paragraph.startswith("Привят "):
-                return self.authority_normalizer.normalize(paragraph[7:])
+    def extract_law(self, paragraphs: list, text: str) -> str:
+        authorities = re.findall(r"^(?:\w+ )+ДУМА$", text, re.M)
 
-        if re.fullmatch("ЗАКОН .* ОБЛАСТИ", paragraphs[0]):
+        if authorities:
+            return self.authority_normalizer.normalize(authorities[0])
+
+        for paragraph in paragraphs:
+            authorities = re.findall("При[нв]ят .+", paragraph)
+
+            if authorities:
+                return self.authority_normalizer.normalize(authorities[0][7:])
+
+        if re.fullmatch("ЗАКОН .* (?:ОБЛАСТИ|КРАЯ)", paragraphs[0]):
             return self.authority_normalizer.normalize("Законодательная Дума " + paragraphs[0][6:])
 
         authority = self.authority_normalizer.normalize(paragraphs[0])
 
-        if re.fullmatch("\w+ (?:области|края)", authority):
+        if re.fullmatch(r"\w+ (?:области|края)", authority):
             authority = "Законодательная дума " + authority
 
         return authority
@@ -124,11 +131,20 @@ class AuthorityExtractor:
 
         return self.authority_normalizer.normalize(paragraphs[0])
 
+    def extract_order(self, paragraphs: list, text: str) -> str:
+        authories = re.findall(r"[пП]риказ ([\w\s,\n]+)(?:Республики|Области|Края)? от", text)
+
+        if authories:
+            return self.authority_normalizer.normalize(authories[0])
+
+        return self.authority_normalizer.normalize(paragraphs[0])
+
     def extract(self, text: str, doc_type: str) -> str:
         if doc_type == FEDERAL_LAW:
             return self.extract_federal_law()
 
         text = re.sub("РОССИЙСКАЯ ФЕДЕРАЦИЯ", "", text)
+        text = "\n".join([line.lstrip(self.strip_chars) for line in text.splitlines()])
 
         text = text.replace("СКОИ", "СКОЙ")
         paragraphs = [self.__clear_paragraph(paragraph) for paragraph in re.findall(r"(?:.*\n)+?\n", text, re.M)]
@@ -147,9 +163,12 @@ class AuthorityExtractor:
             return self.extract_decree(paragraphs, text)
 
         if doc_type == LAW:
-            return self.extract_law(paragraphs)
+            return self.extract_law(paragraphs, text)
 
         if doc_type == DISPOSAL:
             return self.extract_disposal(paragraphs)
+
+        if doc_type == ORDER:
+            return self.extract_order(paragraphs, text)
 
         return self.authority_normalizer.normalize(paragraphs[0])
