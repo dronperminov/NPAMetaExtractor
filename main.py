@@ -1,5 +1,6 @@
 from solution import Solution
-from eval_module import quality
+from evaluators.eval_module import quality
+from evaluators.accuracy_evaluator import AccuracyEvaluator
 from data_reader import DataReader
 
 
@@ -14,7 +15,9 @@ def main():
     solution = Solution()
     predicted = solution.predict(texts)
 
-    solution.test(data)
+    accuracy_evaluator = AccuracyEvaluator()
+    accuracy_evaluator.evaluate(labels, predicted)
+
     print(quality(predicted, labels))
 
 
