@@ -21,13 +21,16 @@ class TypeExtractor:
         self.lower_templates[LAW] = re.compile(r"настоящ\w*? закон.*?|.+?закон вступает в силу|\nо внесении изменени\w в (?:статью \d+ )?закон")
         self.lower_templates[DECREE] = re.compile(r"настоящ\w*? указ.*?|изменени\w*? в указ.*|ный указо.+|указ вступает|указ[ \b]*?президента|опубликовать указ|утверждены\nуказом|названным указом|^о награждении", re.M)
 
+        self.law_tempalte = re.compile(r"^(?:\d+\. )?Настоящий [зЗ]акон вступает в силу")
+        self.resolution_template = re.compile(r"\bпостановля(?:ет|ю):")
+
     def extract(self, text: str) -> str:
         lines = [line for line in text.splitlines() if line]
         first_lines = lines[:15]
         last_lines = lines[-40:]
 
         for line in last_lines[::-1]:
-            if re.search(r"^(?:\d+\. )?Настоящий [зЗ]акон вступает в силу", line):
+            if self.law_tempalte.search(line):
                 return LAW
 
         for doc_type in doc_types:
@@ -48,7 +51,7 @@ class TypeExtractor:
                     if re.search(r"^" + template, line) or re.search(template + r"$", line):
                         return doc_type
 
-        if re.search(r"\bпостановля(?:ет|ю):", lower):
+        if self.resolution_template.search(lower):
             return RESOLUTION
 
         return ORDER
