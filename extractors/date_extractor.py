@@ -18,14 +18,16 @@ class DateExtractor:
 
         self.law_regexp = re.compile(r"^" + self.date_regexp.pattern + r"(?!\s*\d\d:\d\d)")
         self.law_regexps = [
-            re.compile(r"^№ \d+ ?[-—]?ЗК?О? от " + self.date_regexp.pattern, re.M),
-            re.compile(r"^" + self.date_regexp.pattern + r" (?:г\.|года)\n+?№ \d+", re.M),
+            re.compile(r"^№ *\d+ ?[-—]?[Зз3]?[Кк]?[Оо]? от " + self.date_regexp.pattern, re.M),
+            re.compile(r"^" + self.date_regexp.pattern + r" (?:г\.|года)\n+?№ *\d+", re.M),
         ]
         self.decree_regexp = re.compile(r"^(?:[оО]т|г) *?" + self.date_regexp.pattern, re.M)
         self.disposal_regexps = [
-            re.compile(r"РАСПОРЯЖЕНИЕ[\s\S\n]{0,100}?" + self.date_regexp.pattern, re.M),
+            re.compile(r"РАСПОРЯЖЕНИЕ[\s\S\n]{0,50}?" + self.date_regexp.pattern, re.M),
         ]
-        self.resolution_regexp = re.compile(r"ПОСТАНОВЛЕНИЕ[\s\S\n]{0,100}?" + self.date_regexp.pattern, re.M)
+        self.resolution_regexps = [
+            re.compile(r"ПОСТАНОВЛЕНИЕ[\s\S\n]{0,90}?(" + self.date_regexp.pattern + ")", re.M)
+        ]
 
     def __extract_date(self, line: str) -> str:
         return self.date_regexp.findall(line)[0]
@@ -89,6 +91,10 @@ class DateExtractor:
 
         for line in lines[-1:-10:-1]:
             if self.law_regexp.search(line):
+                return self.__extract_date(line)
+
+        for line in lines[:20]:
+            if re.fullmatch(self.date_regexp.pattern + r" .{0,3}№ \d+", line):
                 return self.__extract_date(line)
 
         return ""
@@ -175,10 +181,11 @@ class DateExtractor:
             if self.start_date_regexp.search(line):
                 return self.__extract_date(line)
 
-        dates = self.resolution_regexp.findall(text)
+        for regexp in self.resolution_regexps:
+            dates = regexp.findall(text)
 
-        if dates:
-            return self.__extract_date(dates[0])
+            if dates:
+                return self.__extract_date(dates[0])
 
         for line in lines:
             if self.start_date_regexp.search(line):
