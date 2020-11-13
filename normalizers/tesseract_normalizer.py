@@ -17,7 +17,7 @@ class TesseractNormalizer:
             (re.compile(r"\"ЯНВ&Ё‚Я", re.I), "января"),
             (re.compile(r"оК\*ЪЯбря", re.I), "октября"),
             (re.compile(r"от О"), "от "),
-            (re.compile(r"^0т", re.M), "От "),
+            (re.compile(r"^\[?0т", re.M), "От "),
             (re.compile(r"2ипецк", re.I), "Липецк"),
             (re.compile(r"-п0|-п П", re.I), "-пп"),
             (re.compile(r"[еЕ]7"), "17"),
@@ -64,7 +64,7 @@ class TesseractNormalizer:
 
         text = re.sub(r"[_}{#”‘]", " ", text)
 
-        matches = [match for match in re.finditer(r"[о0О][тТ]\d", text)]
+        matches = [match for match in re.finditer(r"[о0О][тТ][\dб]", text)]
         for match in matches[::-1]:
             start, end = match.span()
             text = text[:start] + 'от ' + text[end - 1:]

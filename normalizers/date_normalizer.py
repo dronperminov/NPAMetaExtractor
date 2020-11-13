@@ -6,13 +6,13 @@ class DateNormalizer:
     def __init__(self):
         date_regexps = [
             r"(?:\b[0-3ЗоОТ%]?[\dоОТб%].? *?[а-яА-Я][а-яА-Я]+[\n ]*?[12][09]\d\d)",
-            r"(?:\b[0-3ЗоОТ%]?[\dоОТб%][./, ] ?[01о]?[\dоО][./, ] ?[12][09]\d\d)"
+            r"(?:\b[0-3ЗоОТ%]?[\dоОТб%][./,\- ] ?[01о]?[\dоО][./,\- ] ?[12][09]\d\d)"
         ]
 
         self.date_regexps = re.compile("|".join(date_regexps), re.M)
 
         self.replace_regexps = [
-            (re.compile(r"[\n,. ]+", re.M), " "),
+            (re.compile(r"[\n,.\- ]+", re.M), " "),
             (re.compile(r"\. +"), "."),
             (re.compile(r" *?я[вн][вд]ар[яь] ?", re.I), ".01."),
             (re.compile(r" *?феврал[яь] ?", re.I), ".02."),
@@ -31,7 +31,7 @@ class DateNormalizer:
             (re.compile(r"[зЗ]", re.I), "3"),
             (re.compile(r"б"), "6"),
             (re.compile(r"%"), "8"),
-            (re.compile(r"[. /]+"), ".")
+            (re.compile(r"[. /\-]+"), ".")
         ]
 
     def replace_date(self, date: str) -> str:

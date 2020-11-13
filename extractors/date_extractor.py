@@ -1,6 +1,5 @@
 import re
 from datetime import datetime
-from typing import List, Tuple
 from constants import *
 
 
@@ -8,25 +7,39 @@ class DateExtractor:
     def __init__(self):
         self.date_regexp = re.compile(r"[0-3]\d\.[01]\d\.[12][09]\d\d")
         self.start_date_regexp = re.compile(r"^[ —]*" + self.date_regexp.pattern, re.M)
+        self.from_date_regexp = re.compile(r"^[оэО]т " + self.date_regexp.pattern, re.M)
         self.order_regexps = [
             re.compile(r"№.*\n^От *?" + self.date_regexp.pattern, re.M),
             re.compile(r"^ПРИКАЗ[\s\S\n]{0,50}?" + self.date_regexp.pattern, re.M),
             re.compile(self.date_regexp.pattern + r"[\s\S\n]{0,50}?^ПРИКАЗ\b", re.M),
             re.compile(r"^\s*" + self.date_regexp.pattern + r"(?: *г. *)?(?: № \d+-\w+)?$", re.M),
             re.compile(r"^От *?" + self.date_regexp.pattern, re.M),
+            re.compile(r"протокол от " + self.date_regexp.pattern)
         ]
 
         self.law_regexp = re.compile(r"^" + self.date_regexp.pattern + r"(?!\s*\d\d:\d\d)")
         self.law_regexps = [
-            re.compile(r"^№ *\d+ ?[-—]?[Зз3]?[Кк]?[Оо]? от " + self.date_regexp.pattern, re.M),
+            re.compile(self.date_regexp.pattern + r".*\n.*\n*ПОСТАНОВЛЕНИЕ"),
+            re.compile(r"^№? *\d+ ?[-—]? ?[Зз3]?\w*?\d* от " + self.date_regexp.pattern, re.M),
             re.compile(r"^" + self.date_regexp.pattern + r" (?:г\.|года)\n+?№ *\d+", re.M),
         ]
         self.decree_regexp = re.compile(r"^(?:[оО]т|г) *?" + self.date_regexp.pattern, re.M)
+        self.decree_regexps = [
+            re.compile(r"^(?:От|г) *?" + self.date_regexp.pattern, re.M),
+            re.compile(r"^(?:от|г) *?" + self.date_regexp.pattern, re.M),
+        ]
         self.disposal_regexps = [
-            re.compile(r"РАСПОРЯЖЕНИЕ[\s\S\n]{0,50}?" + self.date_regexp.pattern, re.M),
+            re.compile(r"^" + self.date_regexp.pattern + r" ?(?:[гт]|[гт]о[дл]а)\.?\n*?(?:№ ?\d+|\d+-р)", re.M),
+            re.compile(r"^[оО]т " + self.date_regexp.pattern + r" № \d+/\d+(?:-рп?)?$", re.M),
+            re.compile(r"^№ ?\d+[/\-\w]*(?: \d+/\d+\-\d+)?\n*?[оО]т ?" + self.date_regexp.pattern, re.M),
+            re.compile(r"УТВЕРЖДЕНЫ[\s\S\n]{0,90}?от (" + self.date_regexp.pattern + ")", re.M),
+            re.compile(r"РАСПОРЯЖЕНИЕ[\s\S\n]{0,45}?" + self.date_regexp.pattern, re.M),
+            re.compile(r"обеспечивающих с " + self.date_regexp.pattern),
         ]
         self.resolution_regexps = [
-            re.compile(r"ПОСТАНОВЛЕНИЕ[\s\S\n]{0,90}?(" + self.date_regexp.pattern + ")", re.M)
+            re.compile(r"ПОСТАНОВЛЕНИЕ[\s\S\n]{0,83}?(" + self.date_regexp.pattern + ")", re.M),
+            re.compile(r"УТВЕРЖДЕН[ЫОА][\s\S\n]{0,180}?от (" + self.date_regexp.pattern + ")", re.M),
+            re.compile(r"Настоящее постановление вступает в силу с " + self.date_regexp.pattern, re.M),
         ]
 
     def __extract_date(self, line: str) -> str:
@@ -78,9 +91,6 @@ class DateExtractor:
             if dates:
                 return self.__extract_date(dates[0])
 
-        if re.search("^ПОСТАНОВЛЕНИЕ", text, re.M):
-            return self.extract_resolution(text)
-
         if "ЗАКОНЫ" in text:
             text = text[:text.index("ЗАКОНЫ")]
 
@@ -97,9 +107,21 @@ class DateExtractor:
             if re.fullmatch(self.date_regexp.pattern + r" .{0,3}№ \d+", line):
                 return self.__extract_date(line)
 
+        for line in lines[:6]:
+            if self.law_regexp.search(line):
+                return self.__extract_date(line)
+
+        if len(lines) > 0 and self.date_regexp.search(lines[-1]):
+            return self.__extract_date(lines[-1])
+
         return ""
 
     def extract_decree(self, text: str) -> str:
+        dates = re.findall(r"В соответствии с рекомендациями [\s\S\n]*? от (" + self.date_regexp.pattern + ")", text)
+
+        if dates:
+            return dates[0]
+
         names = re.findall(r"^(?:О[бБ]?|\d+\.) (?:.*\n)+?\n", text, re.M)
 
         for name in names:
@@ -111,7 +133,7 @@ class DateExtractor:
         if "РИСУНОК" in text:
             text = text[:text.index("РИСУНОК")]
 
-        lines = [line for line in text.splitlines() if len(line) > 2]
+        lines = [line for line in text.splitlines() if len(line) > 1]
 
         for line in lines[:3]:
             if self.start_date_regexp.search(line):
@@ -131,39 +153,30 @@ class DateExtractor:
             if self.start_date_regexp.search(line):
                 return self.__extract_date(line)
 
-        dates = self.decree_regexp.findall(text)
+        for regexp in self.decree_regexps:
+            dates = regexp.findall(text)
 
-        if dates:
-            return self.__extract_date(dates[0])
+            if dates:
+                return self.__extract_date(dates[0])
 
         return ""
 
     def extract_disposal(self, text: str) -> str:
-        dates = re.findall(r"^" + self.date_regexp.pattern + r" ?(?:[гт]|[гт]о[дл]а)\.?\n*?(?:№ ?\d+|\d+-р)", text, re.M)
-
-        if dates:
-            return self.__extract_date(dates[0])
-
-        dates = re.findall(r"^№ ?\d+[/\-\w]*(?: \d+/\d+\-\d+)?\n*?[оО]т ?" + self.date_regexp.pattern, text, re.M)
-
-        if dates:
-            return self.__extract_date(dates[0])
-
-        lines = [line for line in text.splitlines() if len(line) > 2]
-
-        for line in lines[:4]:
-            if self.start_date_regexp.search(line):
-                return self.__extract_date(line)
-
-        for line in lines[-1:-3:-1]:
-            if self.start_date_regexp.search(line):
-                return self.__extract_date(line)
-
         for regexp in self.disposal_regexps:
             dates = regexp.findall(text)
 
             if dates:
                 return self.__extract_date(dates[0])
+
+        lines = [line for line in text.splitlines() if len(line) > 2]
+
+        for line in lines[:4]:
+            if self.start_date_regexp.search(line) or self.from_date_regexp.search(line):
+                return self.__extract_date(line)
+
+        for line in lines[-1:-3:-1]:
+            if self.start_date_regexp.search(line):
+                return self.__extract_date(line)
 
         for line in lines[::-1]:
             if self.start_date_regexp.search(line):
@@ -177,15 +190,15 @@ class DateExtractor:
         if self.date_regexp.search(lines[0]):
             return self.__extract_date(lines[0])
 
-        for line in lines[-1:-3:-1]:
-            if self.start_date_regexp.search(line):
-                return self.__extract_date(line)
-
         for regexp in self.resolution_regexps:
             dates = regexp.findall(text)
 
             if dates:
                 return self.__extract_date(dates[0])
+
+        for line in lines[-1:-3:-1]:
+            if self.start_date_regexp.search(line):
+                return self.__extract_date(line)
 
         for line in lines:
             if self.start_date_regexp.search(line):
