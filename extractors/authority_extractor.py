@@ -10,17 +10,35 @@ class AuthorityExtractor:
 
         self.authors = ["[пП]равительство", "Совет [Мм]инистров", "Президент", "Администрация", "Кабинет [Мм]инистров",
                         "Народное [сС]обрание", "Законодательное [Сс]обрание"]
-        self.upper_authors = ["ПРАВИТЕЛЬСТВ[ОА]", "ГУБЕРНАТОРА?", "ДУМА$", "Дума", "КАБИНЕТ МИНИСТРОВ", "ПРЕЗИДЕНТ",
-                              r"ФЕДЕРАЛЬН(?:АЯ|ОЕ)(?: \w+,?)*", r"МИНИСТЕРСТВО(?: \w+,?)*$", "ГЛАВ[АЫ]", r"СОВЕТА?(?: \w+,?)*",
-                              "ЗАКОНОДАТЕЛЬНОЕ СОБРАНИЕ", r"АРХИВНОЕ(?: \w+,?)*", r"УПРАВЛЕНИЕ(?: \w+,?)*", r"КОМИТЕТ(?: \w+,?)*", "ДЕПАРТАМЕНТ",
-                              r"СЛУЖБА(?: \w+,?)*", r"ИНСПЕКЦИЯ(?: \w+,?)*", r"АППАРАТ(?: \w+,?)*", r"АГЕНТСТВО(?: \w+,?)*"]
+        self.upper_authors = [r"ГУБЕРНАТОРА?",
+                              r"(?:[\w-]+ )*?ДУМА$",
+                              "Дума",
+                              "КАБИНЕТ МИНИСТРОВ",
+                              "ПРЕЗИДЕНТ",
+                              r"ФЕДЕРАЛЬН(?:АЯ|ОЕ)(?: [\w-]+,?)*",
+                              r"МИНИСТЕРСТВО(?: [\w-]+,?)*$",
+                              "[ГТ]ЛАВ[АЫ]",
+                              r"СОВЕТА?(?: [\w-]+,?)*",
+                              "ЗАКОНОДАТЕЛЬНОЕ СОБРАНИЕ",
+                              r"АРХИВНОЕ(?: [\w-]+,?)*",
+                              r"(?:[\w-]+,? )*УПРАВЛЕНИЕ(?: [\w-]+,?)*",
+                              r"(?:[\w-]+,? )*КОМИТЕТ(?: [\w-]+,?)*",
+                              r"ДЕПАРТАМЕНТ(?: [\w-]+,?)*",
+                              r"(?:[\w-]+ )?СЛУЖБА(?: [\w-]+,?)*",
+                              r"ИНСПЕКЦИЯ(?: [\w-]+,?)*",
+                              r"АППАРАТ(?: [\w-]+,?)*",
+                              r"АГЕНТСТВО(?: [\w-]+,?)*",
+                              r"\w+ ОБЛАСТНОЙ СОВЕТ(?: [\w-]+,?)+",
+                              r"АДМИНИСТРАЦИЯ(?: [\w-]+,?)*",
+                              r"КОМИССИЯ(?: [\w-]+,?)*"]
 
         self.joined_authors = "|".join(self.authors)
         self.joined_upper_authors = "|".join(self.upper_authors)
 
         self.authority_regexps = [
             re.compile("((?:" + self.joined_authors + r")[ \n].*?(?:\n.*?)?) п ?остановляет"),
-            re.compile(r"^((?:" + self.joined_upper_authors + r")\n{0,2}.+(?:\n(?:\w+ )?ОБЛАСТИ|\n(?:\w+ )?КРАЯ)?)\n", re.M),
+            re.compile(r"^((?:" + self.joined_upper_authors + r")\n{0,2}.+(?:\n+?(?:[-\w]+ )*?(?:ОБЛАСТИ|КРАЯ|ОКРУГА|РЕСПУБЛИКИ)|\n+?(?:И|ПО) .*|\nРЕСПУБЛИКИ \w+)?)\n", re.M),
+            re.compile(r"^((?:ПРАВИТЕЛЬСТВ[ОА]\.?)\n{0,2}.+(?:\n+?(?:[-\w]+ )*?(?:ОБЛАСТИ|КРАЯ|ОКРУГА|РЕСПУБЛИКИ)|\n+?(?:И|ПО) .*|\nРЕСПУБЛИКИ \w+)?)\n", re.M),
             re.compile(r"((?:" + self.joined_authors + r")[ \n].*?(?:\n.*?)?)\nп ?остановляет"),
 
             re.compile("((?:" + self.joined_authors + r")[ \n].*?(?:\n.*?)?) ПОСТАНОВЛЯЕТ"),
@@ -143,7 +161,6 @@ class AuthorityExtractor:
         if doc_type == FEDERAL_LAW:
             return self.extract_federal_law()
 
-        text = re.sub("РОССИЙСКАЯ ФЕДЕРАЦИЯ", "", text)
         text = "\n".join([line.lstrip(self.strip_chars) for line in text.splitlines()])
 
         text = text.replace("СКОИ", "СКОЙ")
@@ -153,11 +170,13 @@ class AuthorityExtractor:
         for regexp in self.authority_regexps:
             authorities = regexp.findall(text)
 
-            if authorities:
+            if authorities and authorities[0] not in ["ДЕПАРТАМЕНТ\nУПРАВЛЕНИЯ"]:
                 return self.authority_normalizer.normalize(authorities[0])
 
         if doc_type == RESOLUTION:
             return self.extract_resolution(paragraphs, text)
+
+        text = re.sub("РОССИЙСКАЯ ФЕДЕРАЦИЯ", "", text)
 
         if doc_type == DECREE:
             return self.extract_decree(paragraphs, text)
