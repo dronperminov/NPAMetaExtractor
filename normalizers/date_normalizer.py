@@ -5,8 +5,8 @@ from datetime import datetime
 class DateNormalizer:
     def __init__(self):
         date_regexps = [
-            r"(?:\b[0-3ЗоОТ%]?[\dоОТб%].? *?[а-яА-Я][а-яА-Я]+[\n ]*?[12][09]\d\d)",
-            r"(?:\b[0-3ЗоОТ%]?[\dоОТб%][./,\- ] ?[01о]?[\dоО][./,\- ] ?[12][09]\d\d)"
+            r"(?:\b[0-3ЗоОТб%]?[\dоОТб%].? *?[а-яА-Я][а-яА-Я]+[\n ]*?[12][09] ?\d ?\d)",
+            r"(?:\b[0-3ЗоОТб%]?[\dоОТб%][./,\- ] ?[01оОТб%]?[\dоОТб%][./,\- ] ?[12][09] ?\d ?\d)",
         ]
 
         self.date_regexps = re.compile("|".join(date_regexps), re.M)
@@ -35,17 +35,26 @@ class DateNormalizer:
         ]
 
     def replace_date(self, date: str) -> str:
+        if date[-2] == ' ':
+            date = date[:-2] + date[-1]
+
+        if date[-3] == ' ':
+            date = date[:-3] + date[-2:]
+
         for regexp, replacement in self.replace_regexps:
             date = regexp.sub(replacement, date)
 
         if not re.fullmatch(r"\d?\d\.\d?\d\.\d\d\d\d", date):
-            return "[error_date]"
+            return date
 
         parts = date.split('.')
         day, month, year = int(parts[0]), int(parts[1]), int(parts[2])
 
         if year > 2900:
             year -= 900
+
+        if year < 100:
+            year += 2000
 
         if day < 1 or day > 31 or month < 1 or month > 12 or year > 2025:
             return "[error_date]"
@@ -61,7 +70,7 @@ class DateNormalizer:
         normalized = ''
         begin_index = 0
 
-        text = re.sub(r"[«»_=|()?<‚]", "", text)
+        text = re.sub(r"[«»_=|()?<‚\"]", "", text)
         matches = self.date_regexps.finditer(text)
 
         for match in matches:
