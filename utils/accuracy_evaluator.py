@@ -7,7 +7,7 @@ class AccuracyEvaluator:
         self.fields = [
             ("type", lambda x, y: x == y),
             ("date", lambda x, y: x == y),
-            ("number", lambda x, y: x == y),
+            ("number", lambda x, y: x.lower() == y.lower()),
             ("name", lambda x, y: x.replace(" ", "").lower() == y.replace(" ", "").lower()),
             ("authority", lambda x, y: x.replace(" ", "").lower() == y.replace(" ", "").lower())
         ]
