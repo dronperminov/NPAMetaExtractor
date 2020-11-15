@@ -5,11 +5,14 @@ from normalizers.authority_normalizer import AuthorityNormalizer
 
 class AuthorityExtractor:
     def __init__(self, for_metric=True):
-        self.strip_chars = " \n':|-.,‚‘’°©^" + ("\"" if for_metric else "")
+        self.strip_chars = " \n':|-.‚‘’°©^][$=“" + ("\"" if for_metric else "")
+        self.lstrip_chars = ','
+
         self.authority_normalizer = AuthorityNormalizer(self.strip_chars)
 
-        self.authors = ["[пП]равительство", "Совет [Мм]инистров", "Президент", "Администрация", "Кабинет [Мм]инистров",
-                        "Народное [сС]обрание", "Законодательное [Сс]обрание"]
+        self.authors = ["[пП]равительство", "Совет [Мм]инистров", "Президент", "Кабинет [Мм]инистров",
+                        "Народное [сС]обрание", "Законодательное [Сс]обрание", "Государственное [Сс]обрание",
+                        "Государственный комитет"]
         self.upper_authors = [r"ГУБЕРНАТОРА?",
                               r"(?:[\w-]+ )*?ДУМА$",
                               "Дума",
@@ -25,22 +28,22 @@ class AuthorityExtractor:
                               r"(?:[\w-]+,? )*КОМИТЕТ(?: [\w-]+,?)*",
                               r"ДЕПАРТАМЕНТ(?: [\w-]+,?)*",
                               r"(?:[\w-]+ )?СЛУЖБА(?: [\w-]+,?)*",
-                              r"ИНСПЕКЦИЯ(?: [\w-]+,?)*",
+                              r"(?:[\w-]+,? )*ИНСПЕКЦИЯ(?: [\w-]+,?)*",
                               r"АППАРАТ(?: [\w-]+,?)*",
-                              r"АГЕНТСТВО(?: [\w-]+,?)*",
+                              r"(?:[\w-]+,? )*АГЕНТСТВО(?: [\w-]+,?)*",
                               r"\w+ ОБЛАСТНОЙ СОВЕТ(?: [\w-]+,?)+",
-                              r"АДМИНИСТРАЦИЯ(?: [\w-]+,?)*",
-                              r"КОМИССИЯ(?: [\w-]+,?)*"]
+                              r"(?:[\w-]+,? )*КОМИССИЯ(?: [\w-]+,?)*"]
 
         self.joined_authors = "|".join(self.authors)
         self.joined_upper_authors = "|".join(self.upper_authors)
 
-        self.authority_regexps = [
-            re.compile("((?:" + self.joined_authors + r")[ \n].*?(?:\n.*?)?) п ?остановляет"),
-            re.compile(r"^((?:" + self.joined_upper_authors + r")\n{0,2}.+(?:\n+?(?:[-\w]+ )*?(?:ОБЛАСТИ|КРАЯ|ОКРУГА|РЕСПУБЛИКИ)|\n+?(?:И|ПО) .*|\nРЕСПУБЛИКИ \w+)?)\n", re.M),
-            re.compile(r"^((?:ПРАВИТЕЛЬСТВ[ОА]\.?)\n{0,2}.+(?:\n+?(?:[-\w]+ )*?(?:ОБЛАСТИ|КРАЯ|ОКРУГА|РЕСПУБЛИКИ)|\n+?(?:И|ПО) .*|\nРЕСПУБЛИКИ \w+)?)\n", re.M),
-            re.compile(r"((?:" + self.joined_authors + r")[ \n].*?(?:\n.*?)?)\nп ?остановляет"),
+        authority_end = r"\n{0,2}.+(?:\n+?(?:[-\w]+ )*?(?:ОБЛАСТИ|КРАЯ|ОКРУГА|РЕСПУБЛИКИ|ФЕДЕРАЦИИ)|\n+?(?:И|ПО) .*|\nРЕСПУБЛИКИ [\w-]+\.?)?)\n"
 
+        self.authority_regexps = [
+            re.compile("((?:" + self.joined_authors + r")[ \n].*?(?:\n.*?)?) п ?оста ?новляет?"),
+            re.compile(r"^((?:" + self.joined_upper_authors + r")" + authority_end, re.M),
+            re.compile(r"^((?:ПРАВИТЕЛЬСТВ[ОА][.,]?|АДМИНИСТРАЦИЯ(?: [\w-]+,?)*)" + authority_end, re.M),
+            re.compile(r"((?:" + self.joined_authors + r")[ \n].*?(?:\n.*?)?)\nп ?оста ?новляет?"),
             re.compile("((?:" + self.joined_authors + r")[ \n].*?(?:\n.*?)?) ПОСТАНОВЛЯЕТ"),
             re.compile(r"((?:" + self.joined_authors + r")[ \n].*?(?:\n.*?)?)\nПОСТАНОВЛЯЕТ"),
             re.compile(r" постановлением (Губернатора[ \n].*?) от"),
@@ -161,7 +164,7 @@ class AuthorityExtractor:
         if doc_type == FEDERAL_LAW:
             return self.extract_federal_law()
 
-        text = "\n".join([line.lstrip(self.strip_chars) for line in text.splitlines()])
+        text = "\n".join([line.strip(self.strip_chars).lstrip(self.lstrip_chars) for line in text.splitlines()])
 
         text = text.replace("СКОИ", "СКОЙ")
         paragraphs = [self.__clear_paragraph(paragraph) for paragraph in re.findall(r"(?:.*\n)+?\n", text, re.M)]
@@ -171,6 +174,9 @@ class AuthorityExtractor:
             authorities = regexp.findall(text)
 
             if authorities and authorities[0] not in ["ДЕПАРТАМЕНТ\nУПРАВЛЕНИЯ"]:
+                if len(authorities) > 1 and authorities[0].startswith("МИНИСТЕРСТВО") and authorities[1].startswith("МИНИСТЕРСТВО"):
+                    return self.authority_normalizer.normalize(authorities[1])
+
                 return self.authority_normalizer.normalize(authorities[0])
 
         if doc_type == RESOLUTION:
