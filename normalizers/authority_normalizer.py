@@ -6,22 +6,22 @@ class AuthorityNormalizer:
         self.strip_chars = strip_chars + ","
 
         self.date_regexps = [
-            re.compile(r"[0-3оО]?[\dоО].? *?[а-яА-ЯЁ][а-яА-ЯёЁ]+[\n\- ]*[12][09] ?\d ?\d(?: ?года)?"),
-            re.compile(r"[0-3оО]?[\dоО][./,\- ][01о]?[\dоО][./,\- ] ?[12][09] ?\d ?\d(?: ?года)?")
+            re.compile(r"[0-3оО]?[\dоО].? *?[а-яА-ЯЁ][а-яА-ЯёЁ]+[\n\- ]*[12][09] ?\d ?\d(?:.*года)?"),
+            re.compile(r"[0-3оО]?[\dоО][./,\- ][01о]?[\dоО][./,\- ] ?[12][09] ?\d ?\d(?:.*года)?")
         ]
 
         self.replace_regexps = [
             (re.compile("'"), "\""),
-            (re.compile(r"[|=*:/#&‹\]\[<>®$„«`^!]"), ""),
+            (re.compile(r"[|=*:/#&‹\]\[<>®$„«`^!©]"), ""),
             (re.compile("[_\n]| [,‚]"), " "),
-            (re.compile("©"), "с"),
+            # (re.compile("©"), "с"),
             (re.compile("ОЁ"), "Об"),
             (re.compile("Вв"), "в"),
             (re.compile("[—–]"), "-"),
             (re.compile("--"), "-"),
             (re.compile(" но "), " по "),
             (re.compile("но "), "по "),
-            (re.compile(r" постановляет| \(?постановление.*| распоряжение| приказ| указ| статья| \)|\w+ созыва.*$|\d+.*? сессия"), "")
+            (re.compile(r" постановляет| \(?постановление.*| распоряжение| приказ| указ| статья| \)|\w+ созыва.*$|\d+.*? сессия"), ""),
         ]
 
         self.normalize_regexps = [
@@ -38,7 +38,7 @@ class AuthorityNormalizer:
             (re.compile(r"собранием"), "собрание"),
             (re.compile(r"стным"), "стное"),
             (re.compile(r"областной д"), "областная д"),
-            (re.compile(r"ской областная"), "ская областная"),
+            (re.compile(r"ской (?:\- )?областная"), "ская областная"),
             (re.compile(r"ской комисси[ий]"), "ская комиссия"),
             (re.compile(r"народным"), "народное"),
             (re.compile(r"собранием"), "собрание"),
@@ -93,5 +93,8 @@ class AuthorityNormalizer:
 
         if re.fullmatch(r".* [\w.]", authority):
             authority = authority[:-2]
+
+        if "российской федерации" in authority:
+            authority = authority[:authority.index("российской федерации")+20]
 
         return authority

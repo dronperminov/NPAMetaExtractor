@@ -5,7 +5,7 @@ from normalizers.authority_normalizer import AuthorityNormalizer
 
 class AuthorityExtractor:
     def __init__(self, for_metric=True):
-        self.strip_chars = " \n':|-.‚‘’°©^][$=“" + ("\"" if for_metric else "")
+        self.strip_chars = " \n':|-.‚‘’°©^‹][$=“" + ("\"" if for_metric else "")
         self.lstrip_chars = ','
 
         self.authority_normalizer = AuthorityNormalizer(self.strip_chars)
@@ -41,8 +41,8 @@ class AuthorityExtractor:
 
         self.authority_regexps = [
             re.compile("((?:" + self.joined_authors + r")[ \n].*?(?:\n.*?)?) п ?оста ?новляет?"),
-            re.compile(r"^((?:" + self.joined_upper_authors + r")" + authority_end, re.M),
             re.compile(r"^((?:ПРАВИТЕЛЬСТВ[ОА][.,]?|АДМИНИСТРАЦИЯ(?: [\w-]+,?)*)" + authority_end, re.M),
+            re.compile(r"^((?:" + self.joined_upper_authors + r")" + authority_end, re.M),
             re.compile(r"((?:" + self.joined_authors + r")[ \n].*?(?:\n.*?)?)\nп ?оста ?новляет?"),
             re.compile("((?:" + self.joined_authors + r")[ \n].*?(?:\n.*?)?) ПОСТАНОВЛЯЕТ"),
             re.compile(r"((?:" + self.joined_authors + r")[ \n].*?(?:\n.*?)?)\nПОСТАНОВЛЯЕТ"),
